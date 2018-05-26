@@ -22,30 +22,36 @@ bot.on("message", function(message) {
 
     switch (args[0].toLowerCase()) { 
         case "ping":
-            message.channel.sendMessage("Pong!")
+            message.channel.send("Pong!")
         break;
         case "play":
+            
+            let urlTest = new RegExp(/(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/)
             if (!args[1]) {
-                message.channel.sendMessage("Please provide a link to the song you'd like to play.")
+                message.channel.send("Please provide a link to the song you'd like to play.")
                 return
             }
     
             if (!message.member.voiceChannel) {
-                message.channel.sendMessage("Can't request a song if you arent in a voice channel, bro.")
+                message.channel.send("Can't request a song if you arent in a voice channel, bro.")
                 return
             }
-    
+
             if (!servers[message.guild.id]) servers[message.guild.id] = {
                 queue: []
             }
-    
+            
+            if (!urlTest.test(args[1])){
+                message.channel.send("Please provide a link to the song you'd like to play.")
+                return
+            } else {
+                var server = servers[message.guild.id]
+                server.queue.push(args[1])
+            }
+
             if (!message.guild.voiceConnection) message.member.voiceChannel.join().then(function(connection) {
                 play(connection, message)
             })
-    
-            var server = servers[message.guild.id]
-    
-            server.queue.push(args[1])
         break;
         case "skip":
             var server = servers[message.guild.id];
@@ -54,6 +60,10 @@ bot.on("message", function(message) {
         case "stop":
             var server = servers[message.guild.id]
             if(message.guild.voiceConnection) message.guild.voiceConnection.disconnect()
+        break;
+        case "queue":
+            var server = servers[message.guild.id]
+            message.channel.send(server.queue)
         break;
     }
     
