@@ -4,7 +4,8 @@
   "description": "",
   "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bot.js"
   },
   "repository": {
     "type": "git",
@@ -17,8 +18,10 @@
   },
   "homepage": "https://github.com/CalebBuxton/node-discord-bot#readme",
   "dependencies": {
+    "chalk": "^2.4.1",
     "discord.js": "^11.3.2",
     "dotenv": "^5.0.1",
+    "fs-extra": "^6.0.1",
     "node-opus": "^0.3.0",
     "ytdl-core": "^0.20.4"
   }
