@@ -8,8 +8,8 @@ const config = require("./config.json");
 let servers = {};
 
 class SongRequest {
-  constructor(url, requestor) {
-    this.url = url;
+  constructor(songInfo, requestor) {
+    this.songInfo = songInfo;
     this.requestor = requestor;
     this.nowPlaying = false;
   }
@@ -24,15 +24,16 @@ if (!config.token) {
   process.exit(0);
 }
 
-bot.login(config.token);
+bot.login(config.token).catch(err => {
+  console.log(chalk.redBright("Incorrect token provided."));
+  process.exit(0);
+});
 
 bot.on("ready", function() {
   console.log(chalk.blueBright("Loading guilds..."));
   bot.guilds.forEach(guild => {
     servers[guild.id] = { queue: [] };
   });
-
-  console.log(servers);
   console.log(chalk.greenBright("Bot Ready Bruh"));
 });
 
@@ -44,7 +45,6 @@ bot.on("guildCreate", guild => {
 });
 
 bot.on("message", async function(message) {
-  console.log(message.content);
   if (message.author.equals(bot.user)) return;
 
   if (!message.content.startsWith(config.prefix)) return;
@@ -80,13 +80,16 @@ bot.on("message", async function(message) {
         return;
       } else {
         var server = servers[message.guild.id];
-        server.queue.push(args[1]);
+        let songInfo = await YTDL.getInfo(args[1]);
+
+        server.queue.push(new SongRequest(songInfo, message.author));
       }
 
       if (!message.guild.voiceConnection)
         message.member.voiceChannel.join().then(function(connection) {
           play(connection, message);
         });
+
       break;
     case "skip":
       var server = servers[message.guild.id];
@@ -99,7 +102,19 @@ bot.on("message", async function(message) {
       break;
     case "queue":
       var server = servers[message.guild.id];
-      message.channel.send(server.queue);
+      let queueOutput = "";
+
+      server.queue.forEach((request, i) => {
+        queueOutput += `${i + 1}. ${request.requestor.username} - ${
+          request.nowPlaying ? "(Now Playing)" : ""
+        } ${request.songInfo.title}\n`;
+      });
+
+      message.channel.send(
+        queueOutput === ""
+          ? "The queue is empty"
+          : "```\n" + queueOutput + "```"
+      );
       break;
     case "vol":
     case "volume":
@@ -137,14 +152,18 @@ bot.on("message", async function(message) {
 
 function play(connection, message) {
   let server = servers[message.guild.id];
+
   server.dispatcher = connection.playStream(
-    YTDL(server.queue[0], { filter: "audioonly" })
+    YTDL.downloadFromInfo(server.queue[0].songInfo, { filter: "audioonly" })
   );
+
+  server.queue[0].nowPlaying = true;
 
   server.dispatcher.setVolume(config.volume);
 
-  server.queue.shift();
-  server.dispatcher.on("end", function() {
+  server.dispatcher.on("end", function(t) {
+    server.queue.shift();
+
     if (server.queue[0]) play(connection, message);
     else connection.disconnect();
   });
