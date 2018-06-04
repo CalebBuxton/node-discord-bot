@@ -38,6 +38,7 @@ jspm_packages
 
 # Other files
 *.env
+config.json
 
 # testing
 /coverage
